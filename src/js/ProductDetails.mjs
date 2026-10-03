@@ -1,17 +1,33 @@
 import { setLocalStorage, getLocalStorage } from "./utils.mjs";
 
 function productDetailsTemplate(product) {
+  // Resolve image source safely across different JSON versions
+  const imageSrc =
+    (product.Images && product.Images.PrimaryLarge) ||
+    (product.Images && product.Images.PrimaryMedium) ||
+    (product.Images && product.Images.PrimarySmall) ||
+    product.Image ||
+    "";
+
+  // Safe fallback checks for missing properties
+  const brandName = product.Brand ? product.Brand.Name : "";
+  const name = product.NameWithoutBrand || product.Name || "";
+  const price = product.FinalPrice || product.ListPrice || "0.00";
+  const colorName =
+    product.Colors && product.Colors[0] ? product.Colors[0].ColorName : "";
+  const description = product.DescriptionHtmlSimple || "";
+
   return `<section class="product-detail"> 
-    <h3>${product.Brand.Name}</h3>
-    <h2 class="divider">${product.NameWithoutBrand}</h2>
+    <h3>${brandName}</h3>
+    <h2 class="divider">${name}</h2>
     <img
       class="divider"
-      src="${product.Image}"
-      alt="${product.NameWithoutBrand}"
+      src="${imageSrc}"
+      alt="${name}"
     />
-    <p class="product-card__price">$${product.FinalPrice}</p>
-    <p class="product__color">${product.Colors[0].ColorName}</p>
-    <p class="product__description__html">${product.DescriptionHtmlSimple}</p>
+    <p class="product-card__price">$${price}</p>
+    <p class="product__color">${colorName}</p>
+    <p class="product__description__html">${description}</p>
     <div class="product-detail__add">
       <button id="addToCart" data-id="${product.Id}">Add to Cart</button>
     </div>
@@ -26,19 +42,37 @@ export default class ProductDetails {
   }
 
   async init() {
-    // fetch product details using data source
-    this.product = await this.dataSource.findProductById(this.productId);
-    // render the HTML
-    this.renderProductDetails("main");
-    // add listener to Add to Cart button
-    document
-      .getElementById("addToCart")
-      .addEventListener("click", this.addToCart.bind(this));
+    if (!this.productId) {
+      this.renderError("No product ID provided in URL.");
+      return;
+    }
+
+    try {
+      // Fetch product details using data source
+      this.product = await this.dataSource.findProductById(this.productId);
+
+      if (!this.product) {
+        this.renderError("Product not found.");
+        return;
+      }
+
+      // Render the HTML inside <main>
+      this.renderProductDetails("main");
+
+      // Add listener to Add to Cart button
+      const addButton = document.getElementById("addToCart");
+      if (addButton) {
+        addButton.addEventListener("click", this.addToCart.bind(this));
+      }
+    } catch (error) {
+      console.error("Error initializing product details:", error);
+      this.renderError("Failed to load product details.");
+    }
   }
 
   addToCart() {
     let cart = getLocalStorage("so-cart");
-    
+
     // Ensure cart is an array structure
     if (!Array.isArray(cart)) {
       cart = [];
@@ -61,9 +95,18 @@ export default class ProductDetails {
 
   renderProductDetails(selector) {
     const element = document.querySelector(selector);
-    element.insertAdjacentHTML(
-      "afterbegin",
-      productDetailsTemplate(this.product)
-    );
+    if (element) {
+      element.insertAdjacentHTML(
+        "afterbegin",
+        productDetailsTemplate(this.product)
+      );
+    }
+  }
+
+  renderError(message) {
+    const mainElement = document.querySelector("main");
+    if (mainElement) {
+      mainElement.innerHTML = `<p class="error-message">${message}</p>`;
+    }
   }
 }
