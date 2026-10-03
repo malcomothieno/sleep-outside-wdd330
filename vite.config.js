@@ -3,6 +3,9 @@ import { resolve } from "path";
 
 export default defineConfig({
   root: "src",
+  preview: {
+    allowedHosts: true,
+  },
   build: {
     outDir: "../dist",
     emptyOutDir: true,
