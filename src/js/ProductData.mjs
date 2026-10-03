@@ -11,10 +11,13 @@ export default class ProductData {
     this.category = category;
     this.path = `../json/${this.category}.json`;
   }
-  getData(category) {
-  return fetch(`../json/${category}.json`) // or API endpoint URL
-    .then(convertToJson)
-    .then((data) => data);
+async getData(category) {
+  const response = await fetch(`/json/${category}.json`);
+  if (!response.ok) {
+    throw new Error("Bad Response");
+  }
+  const data = await response.json();
+  return data;
 }
   async findProductById(id) {
     const products = await this.getData();
