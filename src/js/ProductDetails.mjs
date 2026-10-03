@@ -91,34 +91,6 @@ export default class ProductDetails {
     }
 
     setLocalStorage("so-cart", cart);
-
-    // Provide visual feedback upon adding item
-    this.showCartMessage(`${this.product.NameWithoutBrand || "Item"} added to cart!`);
-  }
-
-  showCartMessage(message) {
-    const button = document.getElementById("addToCart");
-    let feedback = document.querySelector(".cart-feedback");
-
-    if (!feedback) {
-      feedback = document.createElement("p");
-      feedback.className = "cart-feedback";
-      feedback.style.color = "#306B34";
-      feedback.style.fontWeight = "bold";
-      feedback.style.marginTop = "10px";
-      if (button) {
-        button.after(feedback);
-      }
-    }
-
-    feedback.textContent = message;
-
-    // Automatically clear message after 3 seconds
-    setTimeout(() => {
-      if (feedback) {
-        feedback.remove();
-      }
-    }, 3000);
   }
 
   renderProductDetails(selector) {
