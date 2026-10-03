@@ -7,20 +7,40 @@ function convertToJson(res) {
 }
 
 export default class ProductData {
-  constructor(category) {
+  constructor(category = "tents") {
     this.category = category;
-    this.path = `../json/${this.category}.json`;
   }
-async getData(category) {
-  const response = await fetch(`/json/${category}.json`);
-  if (!response.ok) {
-    throw new Error("Bad Response");
+
+  async getData(category = this.category) {
+    const response = await fetch(`/json/${category}.json`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch /json/${category}.json`);
+    }
+    const data = await convertToJson(response);
+    return data;
   }
-  const data = await response.json();
-  return data;
-}
+
   async findProductById(id) {
-    const products = await this.getData();
-    return products.find((item) => item.Id === id);
+    // Search across all primary categories to locate the product
+    const categories = ["tents", "backpacks", "sleeping-bags", "hammocks"];
+
+    for (const category of categories) {
+      try {
+        const products = await this.getData(category);
+        const productArray = Array.isArray(products)
+          ? products
+          : products.Result || [];
+
+        const found = productArray.find((item) => item.Id === id);
+        if (found) {
+          return found;
+        }
+      } catch (err) {
+        // Skip categories that fail to load
+        continue;
+      }
+    }
+
+    return null;
   }
 }
