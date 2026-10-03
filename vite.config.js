@@ -3,7 +3,6 @@ import { resolve } from "path";
 
 export default defineConfig({
   root: "src",
-  base: "/sleep-outside-wdd330/",
   build: {
     outDir: "../dist",
     emptyOutDir: true,
