@@ -3,8 +3,7 @@ import { resolve } from "path";
 
 export default defineConfig({
   root: "src",
-  // Use subpath base ONLY when building for production (GitHub Pages)
-  base: process.env.NODE_ENV === "production" ? "/sleep-outside-wdd330/" : "/",
+  base: "/sleep-outside-wdd330/",
   build: {
     outDir: "../dist",
     emptyOutDir: true,
