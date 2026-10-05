@@ -1,46 +1,51 @@
-function convertToJson(res) {
+async function convertToJson(res) {
+  const jsonResponse = await res.json();
   if (res.ok) {
-    return res.json();
+    return jsonResponse;
   } else {
-    throw new Error("Bad Response");
+    throw { name: "servicesError", message: jsonResponse };
   }
 }
 
-export default class ProductData {
+export default class ExternalServices {
   constructor(category = "tents") {
     this.category = category;
   }
 
   async getData(category = this.category) {
     const response = await fetch(`/json/${category}.json`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch /json/${category}.json`);
-    }
-    const data = await convertToJson(response);
-    return data;
+    return await convertToJson(response);
   }
 
   async findProductById(id) {
-    // Search across all primary categories to locate the product
     const categories = ["tents", "backpacks", "sleeping-bags", "hammocks"];
-
     for (const category of categories) {
       try {
         const products = await this.getData(category);
         const productArray = Array.isArray(products)
           ? products
           : products.Result || [];
-
         const found = productArray.find((item) => item.Id === id);
-        if (found) {
-          return found;
-        }
+        if (found) return found;
       } catch (err) {
-        // Skip categories that fail to load
         continue;
       }
     }
-
     return null;
+  }
+
+  async checkout(payload) {
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    };
+    const response = await fetch(
+      "https://wdd330-backend-osp8.onrender.com/checkout",
+      options
+    );
+    return await convertToJson(response);
   }
 }

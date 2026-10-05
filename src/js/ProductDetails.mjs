@@ -1,33 +1,17 @@
-import { setLocalStorage, getLocalStorage } from "./utils.mjs";
+import { getLocalStorage, setLocalStorage, alertMessage } from "./utils.mjs";
 
 function productDetailsTemplate(product) {
-  // Resolve image source safely across different JSON versions
-  const imageSrc =
-    (product.Images && product.Images.PrimaryLarge) ||
-    (product.Images && product.Images.PrimaryMedium) ||
-    (product.Images && product.Images.PrimarySmall) ||
-    product.Image ||
-    "";
-
-  // Safe fallback checks for missing properties
-  const brandName = product.Brand ? product.Brand.Name : "";
-  const name = product.NameWithoutBrand || product.Name || "";
-  const price = product.FinalPrice || product.ListPrice || "0.00";
-  const colorName =
-    product.Colors && product.Colors[0] ? product.Colors[0].ColorName : "";
-  const description = product.DescriptionHtmlSimple || "";
-
   return `<section class="product-detail"> 
-    <h3>${brandName}</h3>
-    <h2 class="divider">${name}</h2>
+    <h3>${product.Brand?.Name || ""}</h3>
+    <h2 class="divider">${product.NameWithoutBrand || product.Name}</h2>
     <img
       class="divider"
-      src="${imageSrc}"
-      alt="${name}"
+      src="${product.Image}"
+      alt="${product.NameWithoutBrand || product.Name}"
     />
-    <p class="product-card__price">$${price}</p>
-    <p class="product__color">${colorName}</p>
-    <p class="product__description__html">${description}</p>
+    <p class="product-card__price">$${product.FinalPrice}</p>
+    <p class="product__color">${product.Colors?.[0]?.ColorName || ""}</p>
+    <p class="product__description__html">${product.DescriptionHtmlSimple}</p>
     <div class="product-detail__add">
       <button id="addToCart" data-id="${product.Id}">Add to Cart</button>
     </div>
@@ -42,55 +26,41 @@ export default class ProductDetails {
   }
 
   async init() {
-    if (!this.productId) {
-      this.renderError("No product ID provided in URL.");
-      return;
-    }
+    // Fetch product details using data source
+    this.product = await this.dataSource.findProductById(this.productId);
 
-    try {
-      // Fetch product details using data source
-      this.product = await this.dataSource.findProductById(this.productId);
-
-      if (!this.product) {
-        this.renderError("Product not found.");
-        return;
-      }
-
-      // Render the HTML inside <main>
+    if (this.product) {
+      // Render the HTML
       this.renderProductDetails("main");
 
       // Add listener to Add to Cart button
-      const addButton = document.getElementById("addToCart");
-      if (addButton) {
-        addButton.addEventListener("click", this.addToCart.bind(this));
-      }
-    } catch (error) {
-      console.error("Error initializing product details:", error);
-      this.renderError("Failed to load product details.");
+      document
+        .getElementById("addToCart")
+        .addEventListener("click", this.addToCart.bind(this));
+    } else {
+      alertMessage("Product not found.");
     }
   }
 
   addToCart() {
-    let cart = getLocalStorage("so-cart");
-
-    // Ensure cart is an array structure
-    if (!Array.isArray(cart)) {
-      cart = [];
-    }
-
-    // Locate matching item in current cart
-    const existingIndex = cart.findIndex((item) => item.Id === this.product.Id);
+    const currentCart = getLocalStorage("so-cart") || [];
+    const cartArray = Array.isArray(currentCart) ? currentCart : [currentCart];
+    
+    // Check if item already exists in cart to increment quantity
+    const existingIndex = cartArray.findIndex(
+      (item) => item.Id === this.product.Id
+    );
 
     if (existingIndex > -1) {
-      // Increment quantity if item already exists
-      cart[existingIndex].Quantity = (cart[existingIndex].Quantity || 1) + 1;
+      cartArray[existingIndex].Quantity =
+        (cartArray[existingIndex].Quantity || 1) + 1;
     } else {
-      // Set initial quantity and insert new item
       this.product.Quantity = 1;
-      cart.push(this.product);
+      cartArray.push(this.product);
     }
 
-    setLocalStorage("so-cart", cart);
+    setLocalStorage("so-cart", cartArray);
+    alertMessage(`${this.product.NameWithoutBrand || this.product.Name} added to cart!`, false);
   }
 
   renderProductDetails(selector) {
@@ -100,13 +70,6 @@ export default class ProductDetails {
         "afterbegin",
         productDetailsTemplate(this.product)
       );
-    }
-  }
-
-  renderError(message) {
-    const mainElement = document.querySelector("main");
-    if (mainElement) {
-      mainElement.innerHTML = `<p class="error-message">${message}</p>`;
     }
   }
 }
